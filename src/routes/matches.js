@@ -2,7 +2,11 @@ import { Router } from "express";
 import { matches } from "../db/schema.js";
 import { db } from "../db/db.js";
 import { getMatchStatus } from "../utils/match-status.js";
-import { listMatchesQuerySchema } from "../validation/matches.js";
+import {
+  createMatchSchema,
+  listMatchesQuerySchema,
+} from "../validation/matches.js";
+import { desc } from "drizzle-orm";
 
 export const matchRouter = Router();
 
@@ -31,16 +35,16 @@ matchRouter.get("/", async (req, res) => {
 });
 
 matchRouter.post("/", async (req, res) => {
-  const parsed = createMatchSchema.safeparse(req.body);
+  const parsed = createMatchSchema.safeParse(req.body);
+
+  if (!parsed.success) {
+    return res
+      .status(400)
+      .json({ error: "Invalid payload.", details: parsed.error.issues });
+  }
   const {
     data: { startTime, endTime, homeScore, awayScore },
   } = parsed;
-  if (!parsed.success) {
-    return res.status(400).json({
-      error: "Invalid payload.",
-      details: JSON.stringify(parsed.error),
-    });
-  }
   try {
     const [event] = await db
       .insert(matches)
