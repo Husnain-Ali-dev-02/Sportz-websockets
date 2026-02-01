@@ -25,6 +25,17 @@ export const wsArcjet = arcjetKey ?
         ],
     }) : null;
 
+/**
+ * Create an Express-compatible middleware that enforces ArcJet protection on incoming requests.
+ *
+ * If ArcJet is not configured the middleware immediately calls `next()`. When ArcJet is configured,
+ * the middleware evaluates the protection decision and:
+ * - responds with HTTP 429 and `{ error: 'Too many requests.' }` when denied for rate limiting,
+ * - responds with HTTP 403 and `{ error: 'Forbidden.' }` for other denials,
+ * - responds with HTTP 503 and `{ error: 'Service Unavailable' }` if an internal error occurs.
+ *
+ * @returns {function(req: *, res: *, next: function): Promise<void>} An Express-style middleware function that applies ArcJet protection.
+ */
 export function securityMiddleware() {
     return async (req, res, next) => {
         if(!httpArcjet) return next();
