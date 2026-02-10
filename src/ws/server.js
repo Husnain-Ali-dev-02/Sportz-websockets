@@ -1,6 +1,11 @@
 import { WebSocket, WebSocketServer } from "ws";
 import { wsArcjet } from "../arcjet.js";
 
+/**
+ * Send a JSON-encoded payload over a WebSocket if the socket is open.
+ * Does nothing when the socket is not in the OPEN state.
+ * @param {WebSocket} socket - The WebSocket to send the payload on.
+ * @param {*} payload - The value to JSON.stringify and send. */
 function sendJson(socket, payload) {
   if (socket.readyState !== WebSocket.OPEN) return;
   socket.send(JSON.stringify(payload));
@@ -13,6 +18,20 @@ function broadcastJson(wss, payload) {
   }
 }
 
+/**
+ * Attach a WebSocket server to an existing HTTP(S) server and provide a broadcaster for new matches.
+ *
+ * Installs an upgrade handler that accepts WebSocket upgrades on the "/ws" path, creates a WebSocketServer
+ * for managing connections, sends a welcome message to each connected client, and attaches an error handler
+ * that logs socket errors. If the optional `wsArcjet` protection is available, each incoming connection is
+ * checked; denied connections are closed with code `1013` and reason "Too many requests." when rate-limited,
+ * or code `1008` and reason "Access denied" otherwise. If the protection check throws, the connection is
+ * closed with code `1011` and reason "Server Security Error".
+ *
+ * @param {import('http').Server} server - HTTP(S) server to attach the WebSocket upgrade handler to.
+ * @returns {{ broadcastMatchCreated: (match: any) => void }} An object exposing `broadcastMatchCreated`, a function
+ * that broadcasts a `{ type: 'match_created', data: match }` JSON message to all connected clients.
+ */
 export function attachWebSocketServer(server) {
   const wss = new WebSocketServer({ noServer: true, maxPayload: 1024 * 1024 });
 
